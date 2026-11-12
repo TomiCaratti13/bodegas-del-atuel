@@ -1,0 +1,21 @@
+# Variables de entorno reales (nunca subir secretos)
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+
+# Node / Front
+front/node_modules/
+front/dist/
+
+# Dumps grandes / archivos temporales
+*.sql.gz
+*.dump
+.DS_Store
+Thumbs.db

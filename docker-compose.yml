@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bodegas_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bodegas_atuel}
+      POSTGRES_USER: ${POSTGRES_USER:-bodegas_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_owner_change_me}
+      API_DB_PASSWORD: ${API_DB_PASSWORD:-dev_app_rw_change_me}
+      RO_DB_PASSWORD: ${RO_DB_PASSWORD:-dev_app_ro_change_me}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/migrations/001_esquema.sql:/docker-entrypoint-initdb.d/001_esquema.sql:ro
+      - ./db/migrations/002_constraints.sql:/docker-entrypoint-initdb.d/002_constraints.sql:ro
+      - ./db/migrations/003_funciones.sql:/docker-entrypoint-initdb.d/003_funciones.sql:ro
+      - ./db/migrations/004_procedimientos.sql:/docker-entrypoint-initdb.d/004_procedimientos.sql:ro
+      - ./db/migrations/005_triggers.sql:/docker-entrypoint-initdb.d/005_triggers.sql:ro
+      - ./db/migrations/006_vistas.sql:/docker-entrypoint-initdb.d/006_vistas.sql:ro
+      - ./db/migrations/007_roles.sql:/docker-entrypoint-initdb.d/007_roles.sql:ro
+      - ./db/migrations/008_indices.sql:/docker-entrypoint-initdb.d/008_indices.sql:ro
+      - ./db/docker-init/09_set_passwords.sh:/docker-entrypoint-initdb.d/09_set_passwords.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bodegas_owner} -d ${POSTGRES_DB:-bodegas_atuel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+    container_name: bodegas_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-bodegas_atuel}
+      API_DB_USER: ${API_DB_USER:-app_rw}
+      API_DB_PASSWORD: ${API_DB_PASSWORD:-dev_app_rw_change_me}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://localhost:5173}
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  front:
+    build:
+      context: ./front
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: bodegas_front
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:

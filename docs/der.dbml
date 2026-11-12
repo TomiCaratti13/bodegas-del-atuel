@@ -1,0 +1,252 @@
+// Fuente para dbdiagram.io - TPI Bodegas del Atuel
+Enum estado_documento {
+  en_confeccion
+  terminado
+  procesado
+}
+
+Enum tipo_vino {
+  tinto
+  blanco
+  rosado
+  espumante
+}
+
+Enum tipo_cepa {
+  tinta
+  blanca
+}
+
+Enum tipo_cliente_enum {
+  socio
+  distribuidor
+  exportador
+}
+
+Enum dia_semana {
+  lunes
+  martes
+  miercoles
+  jueves
+  viernes
+  sabado
+  domingo
+}
+
+Table localidad {
+  id_localidad integer [pk, increment]
+  codigo_postal varchar(10) [not null]
+  nombre varchar(100) [not null]
+  provincia varchar(80) [not null]
+  encargado_regional varchar(120) [not null]
+}
+
+Table sala_venta {
+  id_sala integer [pk, increment]
+  calle varchar(120) [not null]
+  numero varchar(15) [not null]
+  dia_cierre dia_semana [not null]
+  id_localidad integer [not null, ref: > localidad.id_localidad]
+}
+
+Table empleado {
+  cuit char(11) [pk]
+  nombre varchar(120) [not null]
+  fecha_ingreso date [not null]
+  salario numeric(12,2) [not null]
+  id_sala integer [not null, ref: > sala_venta.id_sala]
+}
+
+Table finca {
+  id_finca integer [pk, increment]
+  nombre varchar(120) [not null, unique]
+  superficie_ha numeric(10,2) [not null]
+  departamento varchar(80) [not null]
+  provincia varchar(80) [not null]
+}
+
+Table cepa {
+  id_cepa integer [pk, increment]
+  nombre varchar(80) [not null, unique]
+  tipo tipo_cepa [not null]
+}
+
+Table parcela {
+  id_finca integer [pk, ref: > finca.id_finca]
+  nro_parcela integer [pk]
+  superficie_ha numeric(10,2) [not null]
+  anio_plantacion smallint [not null]
+  id_cepa integer [not null, ref: > cepa.id_cepa]
+}
+
+Table bodega {
+  cuit char(11) [pk]
+  razon_social varchar(150) [not null, unique]
+  domicilio varchar(200) [not null]
+}
+
+Table lote_uva {
+  nro_lote integer [pk, increment]
+  id_finca integer [not null]
+  nro_parcela integer [not null]
+  campana smallint [not null]
+  fecha_cosecha date [not null]
+  kg_cosechados numeric(12,2) [not null]
+  cuit_bodega char(11) [not null, ref: > bodega.cuit]
+}
+
+Ref: lote_uva.(id_finca, nro_parcela) > parcela.(id_finca, nro_parcela)
+
+Table analisis_calidad {
+  id_analisis integer [pk, increment]
+  nro_lote integer [not null, ref: > lote_uva.nro_lote]
+  fecha date [not null]
+  grado_brix numeric(4,2) [not null]
+  ph numeric(4,2) [not null]
+  acidez_total numeric(5,2) [not null]
+}
+
+Table vino {
+  cod_vino integer [pk, increment]
+  nombre varchar(100) [not null]
+  tipo tipo_vino [not null]
+  anada smallint [not null]
+  volumen_ml integer [not null]
+  graduacion numeric(4,2) [not null]
+  precio numeric(12,2) [not null]
+  cuit_bodega char(11) [not null, ref: > bodega.cuit]
+}
+
+Table composicion_vino {
+  cod_vino integer [pk, ref: > vino.cod_vino]
+  id_cepa integer [pk, ref: > cepa.id_cepa]
+  porcentaje numeric(5,2) [not null]
+}
+
+Table maridaje {
+  id_maridaje integer [pk, increment]
+  nombre varchar(80) [not null, unique]
+  temperatura_servicio smallint [not null]
+}
+
+Table vino_maridaje {
+  cod_vino integer [pk, ref: > vino.cod_vino]
+  id_maridaje integer [pk, ref: > maridaje.id_maridaje]
+}
+
+Table cliente {
+  id_cliente integer [pk, increment]
+  tipo_cliente tipo_cliente_enum [not null]
+  nombre_razon_social varchar(150) [not null]
+  tipo_documento varchar(20) [not null]
+  nro_documento varchar(20) [not null]
+  direccion varchar(200) [not null]
+  id_localidad integer [not null, ref: > localidad.id_localidad]
+  fecha_alta date [not null]
+  descuento_pct numeric(5,2) [not null]
+}
+
+Table cliente_socio {
+  id_cliente integer [pk, ref: - cliente.id_cliente]
+  tipo_cliente tipo_cliente_enum [not null]
+}
+
+Table cliente_distribuidor {
+  id_cliente integer [pk, ref: - cliente.id_cliente]
+  tipo_cliente tipo_cliente_enum [not null]
+  zona_cobertura varchar(150) [not null]
+  nro_habilitacion varchar(50) [not null, unique]
+}
+
+Table cliente_exportador {
+  id_cliente integer [pk, ref: - cliente.id_cliente]
+  tipo_cliente tipo_cliente_enum [not null]
+  pais_destino_principal varchar(80) [not null]
+}
+
+Table permiso_exportacion {
+  codigo varchar(40) [pk]
+  id_exportador integer [not null, ref: > cliente_exportador.id_cliente]
+  fecha_emision date [not null]
+  fecha_vencimiento date [not null]
+}
+
+Table comprobante {
+  nro_comprobante integer [pk, increment]
+  fecha date [not null]
+  id_cliente integer [not null, ref: > cliente.id_cliente]
+  id_sala integer [not null, ref: > sala_venta.id_sala]
+  subtotal numeric(14,2) [not null]
+  descuento numeric(14,2) [not null]
+  total numeric(14,2) [not null]
+}
+
+Table renglon_comprobante {
+  nro_comprobante integer [pk, ref: > comprobante.nro_comprobante]
+  cod_vino integer [pk, ref: > vino.cod_vino]
+  cantidad integer [not null]
+  precio_unitario numeric(12,2) [not null]
+  descuento_pct numeric(5,2) [not null]
+  subtotal numeric(14,2) [not null]
+}
+
+Table transportista {
+  cod_transportista integer [pk, increment]
+  razon_social varchar(150) [not null]
+  cuit char(11) [not null, unique]
+  email varchar(150) [not null]
+  telefono varchar(40) [not null]
+  domicilio varchar(200) [not null]
+}
+
+Table transportista_localidad {
+  cod_transportista integer [pk, ref: > transportista.cod_transportista]
+  id_localidad integer [pk, ref: > localidad.id_localidad]
+}
+
+Table stock_deposito {
+  cod_vino integer [pk, ref: - vino.cod_vino]
+  cantidad integer [not null]
+}
+
+Table stock_sala {
+  id_sala integer [pk, ref: > sala_venta.id_sala]
+  cod_vino integer [pk, ref: > vino.cod_vino]
+  cantidad integer [not null]
+}
+
+Table ingreso {
+  cod_ingreso integer [pk, increment]
+  fecha date [not null]
+  estado estado_documento [not null]
+  cod_transportista integer [not null, ref: > transportista.cod_transportista]
+  cuit_bodega char(11) [not null, ref: > bodega.cuit]
+}
+
+Table renglon_ingreso {
+  cod_ingreso integer [pk, ref: > ingreso.cod_ingreso]
+  cod_vino integer [pk, ref: > vino.cod_vino]
+  cantidad integer [not null]
+}
+
+Table transferencia {
+  nro_solicitud integer [pk, increment]
+  id_sala integer [not null, ref: > sala_venta.id_sala]
+  fecha_confeccion date [not null]
+  estado estado_documento [not null]
+}
+
+Table renglon_transferencia {
+  nro_solicitud integer [pk, ref: > transferencia.nro_solicitud]
+  cod_vino integer [pk, ref: > vino.cod_vino]
+  cantidad integer [not null]
+}
+
+Table auditoria_precio {
+  id_auditoria integer [pk, increment]
+  cod_vino integer [not null, ref: > vino.cod_vino]
+  precio_anterior numeric(12,2) [not null]
+  precio_nuevo numeric(12,2) [not null]
+  fecha_hora timestamptz [not null]
+  usuario varchar(100) [not null]
+}
